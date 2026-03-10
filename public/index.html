@@ -1271,7 +1271,9 @@
       if (!text) return;
 
       const lowerText = text.toLowerCase();
-      const isActionRequest = lowerText.includes('click') || lowerText.includes('tap') || lowerText.includes('open');
+      // Broader intent detection
+      const actionKeywords = ['click', 'tap', 'open', 'add', 'put', 'buy', 'select', 'press', 'go', 'hit'];
+      const isActionRequest = actionKeywords.some(kw => lowerText.includes(kw));
 
       addChatMessage('user', text);
       input.value = '';
@@ -1286,35 +1288,41 @@
         });
         const data = await res.json();
 
-        loadingMsg.remove(); // Remove thinking message
+        loadingMsg.remove();
 
         if (data.success) {
-          addChatMessage('ai', data.output);
+          const aiOutput = String(data.output);
+          addChatMessage('ai', aiOutput);
 
+          let boxes = [];
           if (data.boxes) {
             try {
-              // Standardize box string format for parsing
-              const boxes = JSON.parse(data.boxes.replace(/'/g, '"'));
+              boxes = typeof data.boxes === 'string' ? JSON.parse(data.boxes.replace(/'/g, '"')) : data.boxes;
+            } catch (e) { console.error('Parsed boxes failed', e); }
+          }
 
-              boxes.forEach((box, i) => {
-                if (Array.isArray(box) && box.length === 4) {
-                  createAIBox(box, i);
-                }
-              });
+          // Fallback: Extract from text if boxes list is empty
+          if (!boxes || boxes.length === 0) {
+            const regex = /\[(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\]/g;
+            let match;
+            while ((match = regex.exec(aiOutput)) !== null) {
+              boxes.push([parseInt(match[1]), parseInt(match[2]), parseInt(match[3]), parseInt(match[4])]);
+            }
+          }
 
-              // Auto-click logic: Tap first box if user asked to click/tap/open
-              if (isActionRequest && boxes.length > 0) {
-                const box = boxes[0];
-                const width = box[2] - box[0];
-                const height = box[3] - box[1];
-                const cx = Math.floor((box[0] + width / 2) / 1000 * state.imgW);
-                const cy = Math.floor((box[1] + height / 2) / 1000 * state.imgH);
+          if (boxes && boxes.length > 0) {
+            boxes.forEach((box, i) => {
+              if (Array.isArray(box) && box.length === 4) createAIBox(box, i);
+            });
 
-                addChatMessage('log', `Auto-clicking element at (${cx}, ${cy})`);
-                send({ type: 'tap', x: cx, y: cy });
-              }
-            } catch (e) {
-              console.error('Failed to parse or auto-click boxes:', e);
+            if (isActionRequest) {
+              const box = boxes[0];
+              const width = box[2] - box[0];
+              const height = box[3] - box[1];
+              const cx = Math.floor((box[0] + width / 2) / 1000 * state.imgW);
+              const cy = Math.floor((box[1] + height / 2) / 1000 * state.imgH);
+              addChatMessage('log', `Auto-clicking target at (${cx}, ${cy})`);
+              send({ type: 'tap', x: cx, y: cy });
             }
           }
         } else {
