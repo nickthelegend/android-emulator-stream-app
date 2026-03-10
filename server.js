@@ -126,7 +126,7 @@ app.post('/api/ai/detect', async (req, res) => {
   try {
     const buffer = await adb('exec-out screencap -p');
     const Client = await getGradio();
-    const client = await Client.connect("maxiw/Qwen2-VL-Detection");
+    const client = await Client.connect("maxiw/Qwen2-VL-Detection", { hf_token: "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" });
 
     // The user's requested params
     const result = await client.predict("/run_example", {
