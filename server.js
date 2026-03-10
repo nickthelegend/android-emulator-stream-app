@@ -6,13 +6,14 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server, perMessageDeflate: false });
+const wss = new WebSocket.Server({ server, path: '/ws', perMessageDeflate: false });
 
 const PORT = process.env.PORT || 3000;
 const FRAME_RATE = parseInt(process.env.FRAME_RATE) || 10;
 const FRAME_INTERVAL = 1000 / FRAME_RATE;
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'client/dist')));
+app.use(express.static(path.join(__dirname, 'public'))); // Fallback for now
 app.use(express.json());
 
 let connectedClients = 0;

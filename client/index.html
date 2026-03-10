@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AndroidStream Agent</title>
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+
+<body>
+  <div class="layout">
+    <!-- Header -->
+    <header>
+      <div class="logo">
+        <div class="logo-icon">📱</div>
+        <div class="logo-text">Android<span>Stream</span></div>
+      </div>
+      <div class="header-divider"></div>
+      <div class="status-bar">
+        <div class="status-chip">
+          <div class="status-dot" id="emuDot"></div>
+          <span id="emuStatus">Connecting...</span>
+        </div>
+        <div class="status-chip">
+          <div class="status-dot online"></div>
+          <span id="clientCount">0 clients</span>
+        </div>
+        <div class="status-chip" id="pingChip" style="display:none">
+          <span>⚡ <span id="pingMs">--</span>ms</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn" id="screenshotBtn">📸 Screenshot</button>
+        <button class="btn" id="freezeBtn">⏸ Freeze</button>
+        <button class="btn danger" id="homeBtn">⌂ Home</button>
+      </div>
+    </header>
+
+    <!-- Left Panel: AI Chat -->
+    <div class="panel-left">
+      <div class="panel-label"
+        style="padding: 16px 16px 8px; border-bottom: 1px solid var(--border); margin-bottom: 0;">AI AGENT CHAT</div>
+      <div class="ai-chat-container">
+        <div class="ai-chat-header" style="background: transparent;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size: 9px; opacity: 0.7;">QWEN2-VL</span>
+            <button class="btn" id="swarmBtn"
+              style="padding: 2px 6px; font-size: 9px; border-color: var(--accent3); color: var(--accent3);">🤖 GOAL
+              SWARM</button>
+          </div>
+          <button class="btn" id="analyzeBtn"
+            style="padding: 2px 6px; font-size: 9px; border-color: var(--accent); color: var(--accent);">🔍
+            ANALYZE</button>
+          <div class="status-dot online"></div>
+        </div>
+        <div class="ai-chat-messages" id="chatMessages">
+          <div class="chat-msg ai">Hello! I am your AI agent. I can analyze the screen and help you decide where to
+            click. Ask me anything!</div>
+        </div>
+        <div class="ai-chat-input-area">
+          <input type="text" id="chatInput" placeholder="Ask AI agent...">
+          <button id="sendChatBtn">SEND</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center Screen -->
+    <div class="screen-area">
+      <div class="phone-frame">
+        <div class="phone-shell">
+          <div class="phone-notch"></div>
+          <div class="canvas-wrapper" id="canvasWrapper">
+            <canvas id="screen" width="360" height="780"></canvas>
+            <div id="swipeOverlay"></div>
+            <div class="loading-overlay" id="loadingOverlay">
+              <div class="loading-spinner"></div>
+              <div class="loading-text">Connecting to emulator...</div>
+            </div>
+          </div>
+          <div class="phone-home-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="panel-right">
+      <div class="panel-section">
+        <div class="panel-label">Stats</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="statFps">0</div>
+            <div class="stat-label">FPS</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statFrames">0</div>
+            <div class="stat-label">Frames</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statTaps">0</div>
+            <div class="stat-label">Taps</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statRes">--</div>
+            <div class="stat-label">Resolution</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-label">Interaction Mode</div>
+        <div class="mode-toggle">
+          <button class="mode-btn active" id="modeTap">👆 Tap</button>
+          <button class="mode-btn" id="modeSwipe">👉 Swipe</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-label">Swipe Presets</div>
+        <div class="swipe-presets">
+          <button class="preset-btn" id="swipeUpBtn"><span class="icon">⬆</span>Scroll Up</button>
+          <button class="preset-btn" id="swipeDownBtn"><span class="icon">⬇</span>Scroll Down</button>
+          <button class="preset-btn" id="swipeLeftBtn"><span class="icon">⬅</span>Swipe Left</button>
+          <button class="preset-btn" id="swipeRightBtn"><span class="icon">➡</span>Swipe Right</button>
+          <button class="preset-btn" id="clearBoxesBtn">
+            <span class="icon">🧹</span>Clear AI Overlays
+          </button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-label">Frame Rate</div>
+        <div class="slider-wrapper">
+          <div class="fps-display">
+            <span style="color:var(--muted)">Refresh rate</span>
+            <span class="fps-value"><span id="fpsVal">2</span> fps</span>
+          </div>
+          <input type="range" min="1" max="10" value="2" id="fpsSlider">
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-label">Device Controls</div>
+        <div class="key-grid" id="keyGrid">
+          <button class="key-btn" data-key="4"><span class="icon">◀</span>Back</button>
+          <button class="key-btn" data-key="3"><span class="icon">⌂</span>Home</button>
+          <button class="key-btn" data-key="187"><span class="icon">▣</span>Recents</button>
+          <button class="key-btn" data-key="24"><span class="icon">🔊</span>Vol+</button>
+          <button class="key-btn" data-key="25"><span class="icon">🔉</span>Vol-</button>
+          <button class="key-btn" data-key="26"><span class="icon">⏻</span>Power</button>
+          <button class="key-btn" data-key="66"><span class="icon">↵</span>Enter</button>
+          <button class="key-btn" data-key="67"><span class="icon">⌫</span>Del</button>
+          <button class="key-btn" data-key="82"><span class="icon">☰</span>Menu</button>
+        </div>
+      </div>
+
+      <div class="panel-section" style="border-bottom: none;">
+        <div class="panel-label">Type Text</div>
+        <div class="text-input-area">
+          <textarea id="typeText" placeholder="Type something to send..."></textarea>
+          <button class="send-btn" id="sendTextBtn">SEND TEXT ↵</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>

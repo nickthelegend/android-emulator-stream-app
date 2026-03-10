@@ -1287,7 +1287,7 @@
 
       const lowerText = text.toLowerCase();
       // Broader intent detection
-      const actionKeywords = ['click', 'tap', 'open', 'add', 'put', 'buy', 'select', 'press', 'go', 'hit'];
+      const actionKeywords = ['click', 'tap', 'open', 'add', 'put', 'buy', 'select', 'press', 'go', 'hit', 'book', 'order', 'reserve', 'find', 'search', 'get', 'show', 'navigate'];
       const isActionRequest = actionKeywords.some(kw => lowerText.includes(kw));
 
       addChatMessage('user', text);
@@ -1412,6 +1412,9 @@
           const aiOutput = String(data.output);
           addChatMessage('ai', `[Step] ${aiOutput}`);
 
+          // Clear previous boxes so we only see the current swarm's targets
+          document.querySelectorAll('.ai-box').forEach(b => b.remove());
+
           if (aiOutput.includes("TASK COMPLETED")) {
             addChatMessage('ai', "🚀 Objective finished! Stopping agent.");
             toggleSwarm();
@@ -1424,6 +1427,7 @@
               boxes = typeof data.boxes === 'string' ? JSON.parse(data.boxes.replace(/'/g, '"')) : data.boxes;
             } catch (e) { }
           }
+
           if (!boxes || boxes.length === 0) {
             const regex = /\[(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\]/g;
             let match;
@@ -1433,6 +1437,11 @@
           }
 
           if (boxes && boxes.length > 0) {
+            // Also draw the boxes in swarm mode so the user sees what we found
+            boxes.forEach((box, i) => {
+              if (Array.isArray(box) && box.length === 4) createAIBox(box, i);
+            });
+
             const box = boxes[0];
             const width = box[2] - box[0];
             const height = box[3] - box[1];
