@@ -187,6 +187,13 @@
       background: rgba(0, 255, 136, 0.08);
     }
 
+    .btn#swarmBtn.active {
+      border-color: var(--danger);
+      color: var(--danger);
+      background: rgba(239, 68, 68, 0.1);
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+    }
+
     .btn.danger:hover {
       border-color: var(--danger);
       color: var(--danger);
@@ -838,7 +845,12 @@
       <!-- AI Chat Bot -->
       <div class="ai-chat-container">
         <div class="ai-chat-header" style="background: transparent;">
-          <span style="font-size: 9px; opacity: 0.7;">QWEN2-VL POWERED</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size: 9px; opacity: 0.7;">QWEN2-VL</span>
+            <button class="btn" id="swarmBtn" onclick="toggleSwarm()"
+              style="padding: 2px 6px; font-size: 9px; border-color: var(--accent3); color: var(--accent3);">🤖 GOAL
+              SWARM</button>
+          </div>
           <button class="btn" onclick="analyzeScreen()"
             style="padding: 2px 6px; font-size: 9px; border-color: var(--accent); color: var(--accent);">🔍
             ANALYZE</button>
@@ -970,7 +982,10 @@
       fpsHistory: [],
       swipeStart: null,
       imgW: 360,
-      imgH: 780
+      imgH: 780,
+      swarmActive: false,
+      swarmTimeout: null,
+      swarmGoal: ""
     };
 
     const canvas = document.getElementById('screen');
@@ -1345,6 +1360,98 @@
       container.appendChild(msg);
       container.scrollTop = container.scrollHeight;
       return msg;
+    }
+
+    // ── Swarm Mode ────────────────────────────────────────────────────────────
+    async function toggleSwarm() {
+      if (!state.swarmActive) {
+        const goal = document.getElementById('chatInput').value.trim();
+        if (!goal) {
+          addChatMessage('ai', "Goal required: Type what you want me to do (e.g., 'Book a flight') in the input box, then click GOAL SWARM.");
+          return;
+        }
+        state.swarmGoal = goal;
+        addChatMessage('user', `Executing Goal: ${goal}`);
+        document.getElementById('chatInput').value = '';
+      }
+
+      state.swarmActive = !state.swarmActive;
+      const btn = document.getElementById('swarmBtn');
+      btn.textContent = state.swarmActive ? '🛑 STOP AGENT' : '🤖 GOAL SWARM';
+      btn.classList.toggle('active', state.swarmActive);
+
+      if (state.swarmActive) {
+        log('info', `Autonomous Agent started for: ${state.swarmGoal}`);
+        addChatMessage('ai', `I am now working on: "${state.swarmGoal}". This process is fully autonomous.`);
+        runSwarmCycle();
+      } else {
+        log('info', 'Autonomous Agent stopped');
+        addChatMessage('ai', "Task stopped.");
+        if (state.swarmTimeout) clearTimeout(state.swarmTimeout);
+      }
+    }
+
+    async function runSwarmCycle() {
+      if (!state.swarmActive) return;
+
+      const loadingMsg = addChatMessage('thinking', '<div class="spinner"></div> Agent is executing...', true);
+
+      try {
+        const prompt = `User Objective: "${state.swarmGoal}". Based on the current screen, identify the single best next action to reach this goal. If an interaction is needed, return the bounding box [xmin, ymin, xmax, ymax] for the element. If the objective is complete, include "TASK COMPLETED" in your response.`;
+
+        const res = await fetch('/api/ai/detect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: prompt })
+        });
+        const data = await res.json();
+
+        loadingMsg.remove();
+
+        if (data.success && state.swarmActive) {
+          const aiOutput = String(data.output);
+          addChatMessage('ai', `[Step] ${aiOutput}`);
+
+          if (aiOutput.includes("TASK COMPLETED")) {
+            addChatMessage('ai', "🚀 Objective finished! Stopping agent.");
+            toggleSwarm();
+            return;
+          }
+
+          let boxes = [];
+          if (data.boxes) {
+            try {
+              boxes = typeof data.boxes === 'string' ? JSON.parse(data.boxes.replace(/'/g, '"')) : data.boxes;
+            } catch (e) { }
+          }
+          if (!boxes || boxes.length === 0) {
+            const regex = /\[(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\]/g;
+            let match;
+            while ((match = regex.exec(aiOutput)) !== null) {
+              boxes.push([parseInt(match[1]), parseInt(match[2]), parseInt(match[3]), parseInt(match[4])]);
+            }
+          }
+
+          if (boxes && boxes.length > 0) {
+            const box = boxes[0];
+            const width = box[2] - box[0];
+            const height = box[3] - box[1];
+            const cx = Math.floor((box[0] + width / 2) / 1000 * state.imgW);
+            const cy = Math.floor((box[1] + height / 2) / 1000 * state.imgH);
+
+            log('info', `Agent Tap: (${cx}, ${cy})`);
+            send({ type: 'tap', x: cx, y: cy });
+            state.swarmTimeout = setTimeout(runSwarmCycle, 4000);
+          } else {
+            addChatMessage('ai', "Looking for next path... retrying.");
+            state.swarmTimeout = setTimeout(runSwarmCycle, 5000);
+          }
+        }
+      } catch (err) {
+        if (loadingMsg) loadingMsg.remove();
+        addChatMessage('ai', `Agent Error: ${err.message}. Retrying...`);
+        state.swarmTimeout = setTimeout(runSwarmCycle, 10000);
+      }
     }
 
     // ── Init ───────────────────────────────────────────────────────────────────
