@@ -1,119 +1,86 @@
-# AndroidStream 📱
+# Omni-Commander: Android AI Stream 📱
 
-Stream your Android emulator to any browser with real-time control. This project uses ADB to capture the screen and WebSockets to stream frames to a web interface, allowing for remote interaction (taps, swipes, typing).
+![Banner](assets/1.png)
 
-## 🚀 Features
-- **Real-time Streaming**: Low-latency screen capture via ADB.
-- **Interactive Control**: Send taps, swipes, and key events directly from the browser.
-- **Hardware Buttons**: On-screen buttons for Home, Back, Recents, Power, and Volume.
-- **Terminal Aesthetic**: Sleek, glassmorphism design with action logs and stats.
-- **Agent API**: Programmatic control via POST requests for automated testing or AI agents.
+Transform your Android device into a fully autonomous AI-controlled workstation. **Omni-Commander** allows you to stream, control, and automate your Android device directly from the browser with a high-intelligence AI swarm and voice integration.
 
 ---
 
-## ☁️ VPS Setup (Headless)
+## 🚀 Key Features
 
-Setting up an Android Virtual Device (AVD) on a VPS can be challenging due to hardware virtualization (KVM) and display requirements.
-
-### Step 1: Check KVM Support
-```bash
-egrep -c '(vmx|svm)' /proc/cpuinfo
-```
-*If output is **0**, KVM is not available. The AVD will run via software acceleration (slower).*
-
-### Step 2: Install Required Packages
-```bash
-sudo apt update
-sudo apt install -y qemu-kvm libvirt-daemon-system android-tools-adb unzip wget
-```
-
-### Step 3: Install Android SDK + Emulator
-```bash
-# Download command-line tools
-wget https://dl.google.com/android/repository/commandlinetools-linux-latest.zip
-unzip commandlinetools-linux-latest.zip -d ~/android-sdk/cmdline-tools/latest
-
-# Set environment variables
-export ANDROID_HOME=~/android-sdk
-export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools
-```
-
-### Step 4: Create an AVD
-```bash
-# Install system image
-sdkmanager "system-images;android-33;google_apis;x86_64"
-
-# Create the AVD
-avdmanager create avd -n myavd -k "system-images;android-33;google_apis;x86_64"
-```
-
-### Step 5: List & Run AVD
-**List all available AVDs:**
-```bash
-emulator -list-avds
-# or
-~/android-sdk/cmdline-tools/latest/bin/avdmanager list avd
-```
-
-**Run headless (no display needed):**
-```bash
-emulator -avd myavd -no-window -no-audio -gpu swiftshader_indirect &
-```
-
-**Key Flags:**
-- `-no-window`: No GUI (essential for VPS).
-- `-no-audio`: Skip audio initialization.
-- `-gpu swiftshader_indirect`: Use software rendering (for VPS without GPUs).
-- `-no-snapshot`: Avoid startup issues.
-
-**Verify it's running:**
-```bash
-adb devices
-```
+- **🎙️ Voice-to-Action**: Issue complex goals via the Web Speech API (e.g., "Book a movie ticket").
+- **🧠 Goal Swarm (Autonomous AI)**: Powered by **Qwen2-VL**, the agent analyzes the screen, identifies elements (seats, buttons, inputs), and executes multi-step tasks independently.
+- **🎬 High-Performance Streaming**: Up to 60 FPS low-latency stream for local USB connections.
+- **⚡ Enforced Reasoning**: 10-second wait intervals between actions to allow UI "cure time" and intelligent planning.
+- **📟 Visual Feedback**: Real-time bounding boxes, step logs, and a countdown overlay on the device screen.
+- **🛠️ Remote Control**: Full keyboard/mouse bridge for taps, swipes, and high-speed typing.
 
 ---
 
-## 💻 Local Setup (Laptops with Android Studio)
+## 🖼️ Demos
 
-If you have Android Studio installed, setting up is much simpler.
-
-### 1. Create an AVD
-1. Open **Android Studio**.
-2. Go to **Tools -> Device Manager**.
-3. Create a new Virtual Device (e.g., Pixel 6) and download a system image.
-
-### 2. Start the Emulator
-You can start it via the UI, or via CLI:
-```bash
-# List AVDs
-emulator -list-avds
-
-# Start the emulator
-emulator -avd <avd_name>
-```
-
-### 3. Ensure Environment Variables are set
-Add these to your `.bashrc`, `.zshrc`, or Windows Environment Variables:
-- `ANDROID_HOME`: Path to your Android SDK (e.g., `~/Library/Android/sdk` on Mac or `C:\Users\<user>\AppData\Local\Android\Sdk` on Windows).
-- Add `platform-tools` and `emulator` to your `PATH`.
+| Autonomous Swarm | Visual Detection | Goal Tracking |
+| :---: | :---: | :---: |
+| ![Demo 1](assets/1.png) | ![Demo 2](assets/2.png) | ![Demo 3](assets/3.png) |
 
 ---
 
-## 🛠️ Running the Application
+## 🏗️ Architecture
 
-1. **Install Dependencies**:
-   ```bash
-   npm install
-   ```
+```mermaid
+graph TD
+    User((User)) -->|Voice/Text| WebClient[Web Dashboard]
+    WebClient -->|WebSocket| NodeServer[Backend Server]
+    NodeServer -->|Gradio API| AIModel[Qwen2-VL Agent]
+    AIModel -->|Bounding Boxes| NodeServer
+    NodeServer -->|ADB Commands| AndroidDevice[Android Phone/AVD]
+    AndroidDevice -->|Screen Capture| NodeServer
+    NodeServer -->|H.264/JPEG Stream| WebClient
+    
+    subgraph "Autonomous Loop"
+    AIModel
+    NodeServer
+    AndroidDevice
+    end
+```
 
-2. **Start the Server**:
-   ```bash
-   npm start
-   ```
-   *By default, the server runs on port 3000.*
+### 🛰️ Technology Stack
+- **Frontend**: Vite, Vanilla JS, CSS3 (Glassmorphism), Web Speech API.
+- **Backend**: Node.js, Express, WebSocket (ws), Proxy.
+- **Core**: ADB (Android Debug Bridge) for low-level device interaction.
+- **AI**: Qwen2-VL-7B-Instruct (via Hugging Face Spaces).
 
-3. **Access the Web UI**:
-   Open `http://localhost:3000` in your browser.
+---
+
+## 🛠️ Installation & Setup
+
+### 1. Requirements
+- **Node.js** v18+ 
+- **ADB** installed and added to PATH.
+- **Android Device** with USB Debugging (Security Settings) enabled.
+
+### 2. Configuration
+Create a `.env` file in the root:
+```env
+HF_TOKEN=your_huggingface_token
+PORT=3500
+DEVICE_ID=your_adb_device_id
+```
+
+### 3. Run it
+```bash
+# Install dependencies
+npm install
+
+# Build the frontend
+cd client && npm install && npm run build && cd ..
+
+# Start the commander
+node server.js
+```
+
+### 4. Open in Browser
+Visit `http://localhost:3500`
 
 ---
 
@@ -121,4 +88,12 @@ Add these to your `.bashrc`, `.zshrc`, or Windows Environment Variables:
 ```bash
 docker-compose up --build
 ```
-*Ensure ADB is running on your host machine to allow the container to connect.*
+*Note: Ensure ADB is running on your host machine.*
+
+---
+
+## 🏆 Hackathon Notes
+This project was built to demonstrate the future of **mobile-agentic workflows**. By combining computer vision with low-latency hardware control, we've created a "headless" commander that can perform any task a human can do on a phone.
+
+Built with ⚡ by the Omni-Team.
+
