@@ -1,13 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AndroidStream — Remote Control</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap"
+    rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     :root {
       --bg: #080b0f;
@@ -20,10 +29,11 @@
       --danger: #ef4444;
       --text: #e6edf3;
       --muted: #7d8590;
-      --glow: 0 0 20px rgba(0,255,136,0.15);
+      --glow: 0 0 20px rgba(0, 255, 136, 0.15);
     }
 
-    html, body {
+    html,
+    body {
       height: 100%;
       background: var(--bg);
       color: var(--text);
@@ -84,8 +94,13 @@
       font-size: 14px;
     }
 
-    .logo-text { color: var(--text); }
-    .logo-text span { color: var(--accent); }
+    .logo-text {
+      color: var(--text);
+    }
+
+    .logo-text span {
+      color: var(--accent);
+    }
 
     .header-divider {
       width: 1px;
@@ -117,12 +132,26 @@
       transition: all 0.3s;
     }
 
-    .status-dot.online { background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 2s infinite; }
-    .status-dot.offline { background: var(--danger); }
+    .status-dot.online {
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.offline {
+      background: var(--danger);
+    }
 
     @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.4;
+      }
     }
 
     .header-actions {
@@ -146,9 +175,23 @@
       transition: all 0.15s;
     }
 
-    .btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,255,136,0.05); }
-    .btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,255,136,0.08); }
-    .btn.danger:hover { border-color: var(--danger); color: var(--danger); background: rgba(239,68,68,0.05); }
+    .btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(0, 255, 136, 0.05);
+    }
+
+    .btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(0, 255, 136, 0.08);
+    }
+
+    .btn.danger:hover {
+      border-color: var(--danger);
+      color: var(--danger);
+      background: rgba(239, 68, 68, 0.05);
+    }
 
     /* ── Left Panel ── */
     .panel-left {
@@ -194,10 +237,22 @@
       user-select: none;
     }
 
-    .key-btn:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(14,165,233,0.08); transform: translateY(-1px); }
-    .key-btn:active { transform: translateY(0); }
+    .key-btn:hover {
+      border-color: var(--accent2);
+      color: var(--accent2);
+      background: rgba(14, 165, 233, 0.08);
+      transform: translateY(-1px);
+    }
 
-    .key-btn .icon { font-size: 16px; display: block; margin-bottom: 3px; }
+    .key-btn:active {
+      transform: translateY(0);
+    }
+
+    .key-btn .icon {
+      font-size: 16px;
+      display: block;
+      margin-bottom: 3px;
+    }
 
     /* Input area */
     .text-input-area {
@@ -221,8 +276,13 @@
       transition: border-color 0.15s;
     }
 
-    .text-input-area textarea:focus { border-color: var(--accent); }
-    .text-input-area textarea::placeholder { color: var(--muted); }
+    .text-input-area textarea:focus {
+      border-color: var(--accent);
+    }
+
+    .text-input-area textarea::placeholder {
+      color: var(--muted);
+    }
 
     .send-btn {
       width: 100%;
@@ -238,7 +298,10 @@
       transition: all 0.15s;
     }
 
-    .send-btn:hover { background: #00e07a; box-shadow: var(--glow); }
+    .send-btn:hover {
+      background: #00e07a;
+      box-shadow: var(--glow);
+    }
 
     /* Agent log */
     .agent-log {
@@ -260,17 +323,50 @@
     }
 
     @keyframes slideIn {
-      from { opacity: 0; transform: translateX(-6px); }
-      to { opacity: 1; transform: translateX(0); }
+      from {
+        opacity: 0;
+        transform: translateX(-6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
     }
 
-    .log-entry.tap { border-color: var(--accent); background: rgba(0,255,136,0.05); color: var(--accent); }
-    .log-entry.swipe { border-color: var(--accent2); background: rgba(14,165,233,0.05); color: var(--accent2); }
-    .log-entry.key { border-color: var(--accent3); background: rgba(245,158,11,0.05); color: var(--accent3); }
-    .log-entry.info { border-color: var(--muted); color: var(--muted); }
-    .log-entry.error { border-color: var(--danger); background: rgba(239,68,68,0.05); color: var(--danger); }
+    .log-entry.tap {
+      border-color: var(--accent);
+      background: rgba(0, 255, 136, 0.05);
+      color: var(--accent);
+    }
 
-    .log-time { opacity: 0.5; margin-right: 6px; }
+    .log-entry.swipe {
+      border-color: var(--accent2);
+      background: rgba(14, 165, 233, 0.05);
+      color: var(--accent2);
+    }
+
+    .log-entry.key {
+      border-color: var(--accent3);
+      background: rgba(245, 158, 11, 0.05);
+      color: var(--accent3);
+    }
+
+    .log-entry.info {
+      border-color: var(--muted);
+      color: var(--muted);
+    }
+
+    .log-entry.error {
+      border-color: var(--danger);
+      background: rgba(239, 68, 68, 0.05);
+      color: var(--danger);
+    }
+
+    .log-time {
+      opacity: 0.5;
+      margin-right: 6px;
+    }
 
     /* ── Center: Screen ── */
     .screen-area {
@@ -288,8 +384,8 @@
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(ellipse at 20% 50%, rgba(0,255,136,0.03) 0%, transparent 60%),
-        radial-gradient(ellipse at 80% 50%, rgba(14,165,233,0.03) 0%, transparent 60%);
+        radial-gradient(ellipse at 20% 50%, rgba(0, 255, 136, 0.03) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 50%, rgba(14, 165, 233, 0.03) 0%, transparent 60%);
       pointer-events: none;
     }
 
@@ -308,8 +404,8 @@
       position: relative;
       box-shadow:
         0 0 0 1px #161b22,
-        0 40px 80px rgba(0,0,0,0.6),
-        inset 0 1px 0 rgba(255,255,255,0.05);
+        0 40px 80px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
 
     .phone-notch {
@@ -346,8 +442,15 @@
     }
 
     @keyframes ripple {
-      0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
-      100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+      0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 1;
+      }
+
+      100% {
+        transform: translate(-50%, -50%) scale(2.5);
+        opacity: 0;
+      }
     }
 
     .loading-overlay {
@@ -357,7 +460,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: rgba(5,7,9,0.9);
+      background: rgba(5, 7, 9, 0.9);
       border-radius: 4px;
       gap: 14px;
     }
@@ -371,7 +474,11 @@
       animation: spin 0.8s linear infinite;
     }
 
-    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
 
     .loading-text {
       font-family: 'Space Mono', monospace;
@@ -395,7 +502,9 @@
       display: none;
     }
 
-    #swipeOverlay.active { display: block; }
+    #swipeOverlay.active {
+      display: block;
+    }
 
     .swipe-line {
       position: absolute;
@@ -406,7 +515,11 @@
       animation: fadeOut 0.5s ease forwards;
     }
 
-    @keyframes fadeOut { to { opacity: 0; } }
+    @keyframes fadeOut {
+      to {
+        opacity: 0;
+      }
+    }
 
     /* ── Right Panel ── */
     .panel-right {
@@ -466,11 +579,23 @@
       transition: all 0.15s;
     }
 
-    .preset-btn:hover { border-color: var(--accent2); color: var(--accent2); }
-    .preset-btn .icon { font-size: 18px; display: block; margin-bottom: 3px; }
+    .preset-btn:hover {
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    .preset-btn .icon {
+      font-size: 18px;
+      display: block;
+      margin-bottom: 3px;
+    }
 
     /* FPS slider */
-    .slider-wrapper { display: flex; flex-direction: column; gap: 8px; }
+    .slider-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
 
     .fps-display {
       display: flex;
@@ -480,7 +605,10 @@
       font-size: 11px;
     }
 
-    .fps-value { color: var(--accent); font-weight: 700; }
+    .fps-value {
+      color: var(--accent);
+      font-weight: 700;
+    }
 
     input[type=range] {
       -webkit-appearance: none;
@@ -498,7 +626,7 @@
       border-radius: 50%;
       background: var(--accent);
       cursor: pointer;
-      box-shadow: 0 0 8px rgba(0,255,136,0.4);
+      box-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
     }
 
     /* Mode toggle */
@@ -524,13 +652,27 @@
       transition: all 0.15s;
     }
 
-    .mode-btn.active { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    .mode-btn.active {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
 
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
   </style>
 </head>
+
 <body>
   <div class="layout">
 
@@ -586,7 +728,9 @@
         </div>
       </div>
 
-      <div class="panel-label" style="padding: 16px 16px 8px; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted)">Action Log</div>
+      <div class="panel-label"
+        style="padding: 16px 16px 8px; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted)">
+        Action Log</div>
       <div class="agent-log" id="actionLog">
         <div class="log-entry info"><span class="log-time">--:--:--</span>Waiting for connection...</div>
       </div>
@@ -663,19 +807,23 @@
         </div>
       </div>
 
-      <div class="panel-section" style="flex:1">
-        <div class="panel-label">Agent API</div>
-        <div style="font-family:'Space Mono',monospace; font-size:10px; color:var(--muted); line-height:1.8">
-          <div style="color:var(--accent2); margin-bottom:6px">POST /api/agent</div>
-          <div>{ "action": "tap",</div>
-          <div>&nbsp;&nbsp;"x": 500, "y": 800 }</div>
-          <br>
-          <div>{ "action": "swipe",</div>
-          <div>&nbsp;&nbsp;"x": 180, "y": 800,</div>
-          <div>&nbsp;&nbsp;"x2": 180, "y2": 200 }</div>
-          <br>
-          <div>{ "action": "type",</div>
-          <div>&nbsp;&nbsp;"text": "hello" }</div>
+      <div class="panel-section" style="flex:1; display: flex; flex-direction: column;">
+        <div class="panel-label">AI Assistant</div>
+        <div
+          style="background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 10px; flex: 1;">
+          <button class="send-btn" id="aiBtn" onclick="analyzeScreen()" style="background: var(--accent2);">ANALYZE
+            SCREEN 🔍</button>
+
+          <div id="aiLoading" style="display:none; text-align:center; padding: 10px;">
+            <div class="loading-spinner" style="width:20px; height:20px; margin: 0 auto 8px;"></div>
+            <div style="font-family:'Space Mono',monospace; font-size:10px; color:var(--muted)">AI is thinking...</div>
+          </div>
+
+          <div id="aiResult"
+            style="flex:1; overflow-y:auto; font-family:'Space Mono',monospace; font-size:10px; line-height:1.4;">
+            <div style="color:var(--muted); text-align:center; padding-top: 20px;">Click analyze to detect clickable
+              elements</div>
+          </div>
         </div>
       </div>
     </div>
@@ -760,7 +908,7 @@
           canvas.width = img.width;
           canvas.height = img.height;
           document.getElementById('statRes').textContent =
-            img.width > 999 ? `${(img.width/1000).toFixed(1)}K` : img.width;
+            img.width > 999 ? `${(img.width / 1000).toFixed(1)}K` : img.width;
         }
         ctx.drawImage(img, 0, 0);
 
@@ -776,7 +924,7 @@
         state.lastFrameTime = now;
         state.frames++;
         document.getElementById('statFrames').textContent =
-          state.frames > 999 ? `${(state.frames/1000).toFixed(1)}K` : state.frames;
+          state.frames > 999 ? `${(state.frames / 1000).toFixed(1)}K` : state.frames;
 
         // Hide loading overlay
         document.getElementById('loadingOverlay').style.display = 'none';
@@ -851,9 +999,9 @@
       const w = state.imgW, h = state.imgH;
       const cx = w / 2, cy = h / 2;
       const map = {
-        up:    { x1: cx, y1: cy + 200, x2: cx, y2: cy - 200 },
-        down:  { x1: cx, y1: cy - 200, x2: cx, y2: cy + 200 },
-        left:  { x1: cx + 200, y1: cy, x2: cx - 200, y2: cy },
+        up: { x1: cx, y1: cy + 200, x2: cx, y2: cy - 200 },
+        down: { x1: cx, y1: cy - 200, x2: cx, y2: cy + 200 },
+        left: { x1: cx + 200, y1: cy, x2: cx - 200, y2: cy },
         right: { x1: cx - 200, y1: cy, x2: cx + 200, y2: cy }
       };
       const s = map[dir];
@@ -918,8 +1066,96 @@
       while (logEl.children.length > 100) logEl.removeChild(logEl.firstChild);
     }
 
+    // ── AI Analysis ────────────────────────────────────────────────────────────
+    async function analyzeScreen() {
+      const btn = document.getElementById('aiBtn');
+      const loader = document.getElementById('aiLoading');
+      const resultDiv = document.getElementById('aiResult');
+
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+      loader.style.display = 'block';
+      resultDiv.innerHTML = '';
+
+      // Clear previous boxes
+      document.querySelectorAll('.ai-box').forEach(b => b.remove());
+
+      try {
+        const res = await fetch('/api/ai/detect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: "detect all clickable elements like buttons, icons, or input fields. For each element, tell me what it is and its bounding box." })
+        });
+
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+
+        resultDiv.innerHTML = `<div style="color:var(--accent2); margin-bottom:8px;">Detected Elements:</div><div style="color:var(--text); white-space: pre-wrap;">${data.output}</div>`;
+
+        // Parse boxes if they exist
+        // Qwen returns boxes as [[xmin, ymin, xmax, ymax], ...] scaled to 1000
+        try {
+          const boxesStr = data.boxes || "[]";
+          const boxes = JSON.parse(boxesStr.replace(/'/g, '"'));
+
+          boxes.forEach((box, i) => {
+            if (Array.isArray(box) && box.length === 4) {
+              createAIBox(box, i);
+            }
+          });
+
+          log('info', `AI detected ${boxes.length} elements`);
+        } catch (e) {
+          console.error('Failed to parse boxes:', e);
+        }
+
+      } catch (err) {
+        log('error', `AI Failed: ${err.message}`);
+        resultDiv.innerHTML = `<div style="color:var(--danger)">Error: ${err.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        loader.style.display = 'none';
+      }
+    }
+
+    function createAIBox(box, index) {
+      // box is [xmin, ymin, xmax, ymax] scaled to 1000
+      const [xmin, ymin, xmax, ymax] = box;
+
+      const width = xmax - xmin;
+      const height = ymax - ymin;
+
+      // Calculate native center for tap command
+      const cx = Math.floor((xmin + width / 2) / 1000 * state.imgW);
+      const cy = Math.floor((ymin + height / 2) / 1000 * state.imgH);
+
+      const el = document.createElement('div');
+      el.className = 'ai-box';
+      el.style.position = 'absolute';
+      el.style.border = '2px solid var(--accent2)';
+      el.style.background = 'rgba(14, 165, 233, 0.1)';
+      el.style.left = (xmin / 10) + '%';
+      el.style.top = (ymin / 10) + '%';
+      el.style.width = (width / 10) + '%';
+      el.style.height = (height / 10) + '%';
+      el.style.cursor = 'pointer';
+      el.style.zIndex = '100';
+      el.title = `Click to tap element #${index + 1}`;
+
+      el.onclick = (e) => {
+        e.stopPropagation();
+        send({ type: 'tap', x: cx, y: cy });
+        log('tap', `AI Tap on element #${index + 1} at (${cx}, ${cy})`);
+        spawnRipple(e.pageX - canvas.getBoundingClientRect().left, e.pageY - canvas.getBoundingClientRect().top);
+      };
+
+      document.getElementById('canvasWrapper').appendChild(el);
+    }
+
     // ── Init ───────────────────────────────────────────────────────────────────
     connect();
   </script>
 </body>
+
 </html>
