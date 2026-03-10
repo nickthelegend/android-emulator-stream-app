@@ -54,7 +54,7 @@
 
     .layout {
       display: grid;
-      grid-template-columns: 260px 1fr 240px;
+      grid-template-columns: 400px 1fr 260px;
       grid-template-rows: 56px 1fr;
       height: 100vh;
       gap: 0;
@@ -196,6 +196,15 @@
     /* ── Left Panel ── */
     .panel-left {
       border-right: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Right Panel ── */
+    .panel-right {
+      border-left: 1px solid var(--border);
       background: var(--surface);
       display: flex;
       flex-direction: column;
@@ -670,6 +679,104 @@
       background: var(--border);
       border-radius: 2px;
     }
+
+    /* AI Chat Styles */
+    .ai-chat-container {
+      flex: 1;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 10;
+    }
+
+    .ai-chat-header {
+      padding: 8px 12px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--accent2);
+    }
+
+    .ai-chat-messages {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .chat-msg {
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      max-width: 85%;
+      line-height: 1.4;
+    }
+
+    .chat-msg.user {
+      align-self: flex-end;
+      background: var(--accent2);
+      color: #000;
+      border-radius: 12px 12px 0 12px;
+    }
+
+    .chat-msg.ai {
+      align-self: flex-start;
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 12px 12px 12px 0;
+    }
+
+    .chat-msg.log {
+      align-self: flex-start;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-style: dashed;
+      font-size: 10px;
+      opacity: 0.8;
+    }
+
+    .ai-chat-input-area {
+      padding: 8px;
+      display: flex;
+      gap: 8px;
+      border-top: 1px solid var(--border);
+      background: var(--surface2);
+    }
+
+    .ai-chat-input-area input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      outline: none;
+    }
+
+    .ai-chat-input-area button {
+      background: var(--accent2);
+      color: #000;
+      border: none;
+      padding: 0 12px;
+      border-radius: 4px;
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      font-size: 10px;
+      cursor: pointer;
+    }
   </style>
 </head>
 
@@ -703,36 +810,29 @@
       </div>
     </header>
 
-    <!-- Left Panel -->
+    <!-- Left Panel: AI Chat -->
     <div class="panel-left">
-      <div class="panel-section">
-        <div class="panel-label">Device Controls</div>
-        <div class="key-grid">
-          <button class="key-btn" onclick="sendKey(4)"><span class="icon">◀</span>Back</button>
-          <button class="key-btn" onclick="sendKey(3)"><span class="icon">⌂</span>Home</button>
-          <button class="key-btn" onclick="sendKey(187)"><span class="icon">▣</span>Recents</button>
-          <button class="key-btn" onclick="sendKey(24)"><span class="icon">🔊</span>Vol+</button>
-          <button class="key-btn" onclick="sendKey(25)"><span class="icon">🔉</span>Vol-</button>
-          <button class="key-btn" onclick="sendKey(26)"><span class="icon">⏻</span>Power</button>
-          <button class="key-btn" onclick="sendKey(66)"><span class="icon">↵</span>Enter</button>
-          <button class="key-btn" onclick="sendKey(67)"><span class="icon">⌫</span>Del</button>
-          <button class="key-btn" onclick="sendKey(82)"><span class="icon">☰</span>Menu</button>
-        </div>
-      </div>
-
-      <div class="panel-section">
-        <div class="panel-label">Type Text</div>
-        <div class="text-input-area">
-          <textarea id="typeText" placeholder="Type something to send..."></textarea>
-          <button class="send-btn" onclick="sendText()">SEND TEXT ↵</button>
-        </div>
-      </div>
-
       <div class="panel-label"
-        style="padding: 16px 16px 8px; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted)">
-        Action Log</div>
-      <div class="agent-log" id="actionLog">
-        <div class="log-entry info"><span class="log-time">--:--:--</span>Waiting for connection...</div>
+        style="padding: 16px 16px 8px; border-bottom: 1px solid var(--border); margin-bottom: 0;">AI
+        AGENT CHAT</div>
+      <!-- AI Chat Bot -->
+      <div class="ai-chat-container">
+        <div class="ai-chat-header" style="background: transparent;">
+          <span style="font-size: 9px; opacity: 0.7;">QWEN2-VL POWERED</span>
+          <button class="btn" onclick="analyzeScreen()"
+            style="padding: 2px 6px; font-size: 9px; border-color: var(--accent); color: var(--accent);">🔍
+            ANALYZE</button>
+          <div class="status-dot online"></div>
+        </div>
+        <div class="ai-chat-messages" id="chatMessages">
+          <div class="chat-msg ai">Hello! I am your AI agent. I can analyze the screen and help you decide where to
+            click. Ask me anything!</div>
+        </div>
+        <div class="ai-chat-input-area">
+          <input type="text" id="chatInput" placeholder="Ask AI agent..."
+            onkeydown="if(event.key==='Enter') sendChatMessage()">
+          <button onclick="sendChatMessage()">SEND</button>
+        </div>
       </div>
     </div>
 
@@ -793,6 +893,10 @@
           <button class="preset-btn" onclick="doSwipe('down')"><span class="icon">⬇</span>Scroll Down</button>
           <button class="preset-btn" onclick="doSwipe('left')"><span class="icon">⬅</span>Swipe Left</button>
           <button class="preset-btn" onclick="doSwipe('right')"><span class="icon">➡</span>Swipe Right</button>
+          <button class="preset-btn" onclick="clearAIBoxes()"
+            style="grid-column: span 2; border-color: var(--danger); color: var(--danger); margin-top: 8px;">
+            <span class="icon">🧹</span>Clear AI Overlays
+          </button>
         </div>
       </div>
 
@@ -807,23 +911,26 @@
         </div>
       </div>
 
-      <div class="panel-section" style="flex:1; display: flex; flex-direction: column;">
-        <div class="panel-label">AI Assistant</div>
-        <div
-          style="background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 10px; flex: 1;">
-          <button class="send-btn" id="aiBtn" onclick="analyzeScreen()" style="background: var(--accent2);">ANALYZE
-            SCREEN 🔍</button>
+      <div class="panel-section">
+        <div class="panel-label">Device Controls</div>
+        <div class="key-grid">
+          <button class="key-btn" onclick="sendKey(4)"><span class="icon">◀</span>Back</button>
+          <button class="key-btn" onclick="sendKey(3)"><span class="icon">⌂</span>Home</button>
+          <button class="key-btn" onclick="sendKey(187)"><span class="icon">▣</span>Recents</button>
+          <button class="key-btn" onclick="sendKey(24)"><span class="icon">🔊</span>Vol+</button>
+          <button class="key-btn" onclick="sendKey(25)"><span class="icon">�</span>Vol-</button>
+          <button class="key-btn" onclick="sendKey(26)"><span class="icon">⏻</span>Power</button>
+          <button class="key-btn" onclick="sendKey(66)"><span class="icon">↵</span>Enter</button>
+          <button class="key-btn" onclick="sendKey(67)"><span class="icon">⌫</span>Del</button>
+          <button class="key-btn" onclick="sendKey(82)"><span class="icon">☰</span>Menu</button>
+        </div>
+      </div>
 
-          <div id="aiLoading" style="display:none; text-align:center; padding: 10px;">
-            <div class="loading-spinner" style="width:20px; height:20px; margin: 0 auto 8px;"></div>
-            <div style="font-family:'Space Mono',monospace; font-size:10px; color:var(--muted)">AI is thinking...</div>
-          </div>
-
-          <div id="aiResult"
-            style="flex:1; overflow-y:auto; font-family:'Space Mono',monospace; font-size:10px; line-height:1.4;">
-            <div style="color:var(--muted); text-align:center; padding-top: 20px;">Click analyze to detect clickable
-              elements</div>
-          </div>
+      <div class="panel-section">
+        <div class="panel-label">Type Text</div>
+        <div class="text-input-area">
+          <textarea id="typeText" placeholder="Type something to send..."></textarea>
+          <button class="send-btn" onclick="sendText()">SEND TEXT ↵</button>
         </div>
       </div>
     </div>
@@ -1054,28 +1161,12 @@
 
     // ── Log ────────────────────────────────────────────────────────────────────
     function log(type, msg) {
-      const logEl = document.getElementById('actionLog');
-      const now = new Date();
-      const time = now.toTimeString().slice(0, 8);
-      const entry = document.createElement('div');
-      entry.className = `log-entry ${type}`;
-      entry.innerHTML = `<span class="log-time">${time}</span>${msg}`;
-      logEl.appendChild(entry);
-      logEl.scrollTop = logEl.scrollHeight;
-      // Keep max 100 entries
-      while (logEl.children.length > 100) logEl.removeChild(logEl.firstChild);
+      addChatMessage('log', msg);
     }
 
     // ── AI Analysis ────────────────────────────────────────────────────────────
     async function analyzeScreen() {
-      const btn = document.getElementById('aiBtn');
-      const loader = document.getElementById('aiLoading');
-      const resultDiv = document.getElementById('aiResult');
-
-      btn.disabled = true;
-      btn.style.opacity = '0.5';
-      loader.style.display = 'block';
-      resultDiv.innerHTML = '';
+      addChatMessage('ai', "Analyzing screen for clickable elements...");
 
       // Clear previous boxes
       document.querySelectorAll('.ai-box').forEach(b => b.remove());
@@ -1090,7 +1181,7 @@
         const data = await res.json();
         if (!data.success) throw new Error(data.error);
 
-        resultDiv.innerHTML = `<div style="color:var(--accent2); margin-bottom:8px;">Detected Elements:</div><div style="color:var(--text); white-space: pre-wrap;">${data.output}</div>`;
+        addChatMessage('ai', data.output);
 
         // Parse boxes if they exist
         // Qwen returns boxes as [[xmin, ymin, xmax, ymax], ...] scaled to 1000
@@ -1111,11 +1202,7 @@
 
       } catch (err) {
         log('error', `AI Failed: ${err.message}`);
-        resultDiv.innerHTML = `<div style="color:var(--danger)">Error: ${err.message}</div>`;
-      } finally {
-        btn.disabled = false;
-        btn.style.opacity = '1';
-        loader.style.display = 'none';
+        addChatMessage('ai', `Error: ${err.message}`);
       }
     }
 
@@ -1151,6 +1238,75 @@
       };
 
       document.getElementById('canvasWrapper').appendChild(el);
+    }
+
+    function clearAIBoxes() {
+      document.querySelectorAll('.ai-box').forEach(b => b.remove());
+      log('info', 'AI overlays cleared');
+    }
+
+    async function sendChatMessage() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const lowerText = text.toLowerCase();
+      const isActionRequest = lowerText.includes('click') || lowerText.includes('tap') || lowerText.includes('open');
+
+      addChatMessage('user', text);
+      input.value = '';
+
+      try {
+        const res = await fetch('/api/ai/detect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: text })
+        });
+        const data = await res.json();
+        if (data.success) {
+          addChatMessage('ai', data.output);
+
+          if (data.boxes) {
+            try {
+              // Standardize box string format for parsing
+              const boxes = JSON.parse(data.boxes.replace(/'/g, '"'));
+
+              boxes.forEach((box, i) => {
+                if (Array.isArray(box) && box.length === 4) {
+                  createAIBox(box, i);
+                }
+              });
+
+              // Auto-click logic: Tap first box if user asked to click/tap/open
+              if (isActionRequest && boxes.length > 0) {
+                const box = boxes[0];
+                const width = box[2] - box[0];
+                const height = box[3] - box[1];
+                const cx = Math.floor((box[0] + width / 2) / 1000 * state.imgW);
+                const cy = Math.floor((box[1] + height / 2) / 1000 * state.imgH);
+
+                addChatMessage('log', `Auto-clicking element at (${cx}, ${cy})`);
+                send({ type: 'tap', x: cx, y: cy });
+              }
+            } catch (e) {
+              console.error('Failed to parse or auto-click boxes:', e);
+            }
+          }
+        } else {
+          addChatMessage('ai', "Error: " + data.error);
+        }
+      } catch (err) {
+        addChatMessage('ai', "Failed to connect to AI agent.");
+      }
+    }
+
+    function addChatMessage(type, text) {
+      const container = document.getElementById('chatMessages');
+      const msg = document.createElement('div');
+      msg.className = `chat-msg ${type}`;
+      msg.textContent = text;
+      container.appendChild(msg);
+      container.scrollTop = container.scrollHeight;
     }
 
     // ── Init ───────────────────────────────────────────────────────────────────
