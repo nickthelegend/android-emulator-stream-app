@@ -488,7 +488,7 @@ window.addEventListener('load', () => {
   document.getElementById('fpsSlider').oninput = (e) => {
     const val = e.target.value;
     document.getElementById('fpsVal').textContent = val;
-    // We could send a command to server to change frame rate here if supported
+    send({ type: 'set_fps', value: val });
   };
 
   document.getElementById('sendTextBtn').onclick = sendText;

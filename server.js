@@ -9,8 +9,8 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server, path: '/ws', perMessageDeflate: false });
 
 const PORT = process.env.PORT || 3000;
-const FRAME_RATE = parseInt(process.env.FRAME_RATE) || 10;
-const FRAME_INTERVAL = 1000 / FRAME_RATE;
+const FRAME_RATE_DEFAULT = 30; // Better for local USB
+let currentFrameInterval = 1000 / FRAME_RATE_DEFAULT;
 
 app.use(express.static(path.join(__dirname, 'client/dist')));
 app.use(express.static(path.join(__dirname, 'public'))); // Fallback for now
@@ -72,17 +72,34 @@ function broadcast(data) {
 }
 
 function startStream() {
-  if (streamInterval) return;
-  streamInterval = setInterval(async () => {
-    if (wss.clients.size === 0) return;
+  if (isCapturing || streamInterval) return;
+
+  const run = async () => {
+    if (wss.clients.size === 0) {
+      streamInterval = null;
+      return;
+    }
+
+    const startTime = Date.now();
     const frame = await captureFrame();
     if (frame) broadcast({ type: 'frame', data: frame });
-  }, FRAME_INTERVAL);
-  console.log(`🎬 Stream started at ${FRAME_RATE} fps`);
+
+    // Adjust next capture based on how long this one took
+    const elapsed = Date.now() - startTime;
+    const delay = Math.max(0, currentFrameInterval - elapsed);
+
+    streamInterval = setTimeout(run, delay);
+  };
+
+  streamInterval = setTimeout(run, currentFrameInterval);
+  console.log(`🎬 Stream started (target: ${1000 / currentFrameInterval} fps)`);
 }
 
 function stopStream() {
-  if (streamInterval) { clearInterval(streamInterval); streamInterval = null; }
+  if (streamInterval) {
+    clearTimeout(streamInterval);
+    streamInterval = null;
+  }
 }
 
 app.get('/api/status', async (req, res) => {
@@ -166,6 +183,13 @@ wss.on('connection', async (ws) => {
         case 'type': await adbText(`shell input text "${msg.text.replace(/ /g, '%s')}"`); break;
         case 'keyevent': await adbText(`shell input keyevent ${msg.keycode}`); break;
         case 'ping': ws.send(JSON.stringify({ type: 'pong' })); break;
+        case 'set_fps':
+          const fps = parseInt(msg.value);
+          if (fps > 0) {
+            currentFrameInterval = 1000 / fps;
+            console.log(`⚡ FPS updated to: ${fps}`);
+          }
+          break;
       }
     } catch (err) { ws.send(JSON.stringify({ type: 'error', message: err.message })); }
   });
