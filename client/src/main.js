@@ -331,14 +331,10 @@ async function sendChatMessage() {
           if (Array.isArray(box) && box.length === 4) createAIBox(box, i);
         });
 
-        if (isActionRequest) {
-          const box = boxes[0];
-          const width = box[2] - box[0];
-          const height = box[3] - box[1];
-          const cx = Math.floor((box[0] + width / 2) / 1000 * state.imgW);
-          const cy = Math.floor((box[1] + height / 2) / 1000 * state.imgH);
-          addChatMessage('log', `Auto-clicking target at (${cx}, ${cy})`);
-          send({ type: 'tap', x: cx, y: cy });
+        if (isActionRequest && !state.swarmActive) {
+          addChatMessage('ai', "I've identified the target. Starting autonomous swarm to complete your goal...");
+          state.swarmGoal = text;
+          toggleSwarm(); // Start the loop
         }
       }
     } else {
@@ -449,9 +445,11 @@ async function runSwarmCycle() {
 
         log('info', `Agent Tap: (${cx}, ${cy})`);
         send({ type: 'tap', x: cx, y: cy });
-        state.swarmTimeout = setTimeout(runSwarmCycle, 4000);
+
+        addChatMessage('log', `Waiting 10s for screen update...`);
+        state.swarmTimeout = setTimeout(runSwarmCycle, 10000);
       } else {
-        addChatMessage('ai', "Looking for next path... retrying.");
+        addChatMessage('ai', "Looking for next path... retrying in 5s.");
         state.swarmTimeout = setTimeout(runSwarmCycle, 5000);
       }
     }
