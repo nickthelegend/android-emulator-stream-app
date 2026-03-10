@@ -8,7 +8,7 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server, path: '/ws', perMessageDeflate: false });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3500;
 const FRAME_RATE_DEFAULT = 30; // Better for local USB
 let currentFrameInterval = 1000 / FRAME_RATE_DEFAULT;
 
@@ -130,21 +130,45 @@ app.post('/api/key/:key', async (req, res) => {
   res.json({ success: true });
 });
 
-let GradioClient = null;
-async function getGradio() {
-  if (!GradioClient) {
-    const { Client } = await import('@gradio/client');
-    GradioClient = Client;
+// Set token globally to ensure Gradio client picks it up
+process.env.HF_TOKEN = "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";
+
+let aiClient = null;
+async function getAIClient() {
+  if (aiClient) return aiClient;
+
+  const { Client } = await import('@gradio/client');
+  const token = process.env.HF_TOKEN;
+
+  const connectionOptions = {
+    hf_token: token,
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  };
+
+  try {
+    console.log('🔄 Connecting to AI Detection space with Auth Header...');
+    aiClient = await Client.connect("maxiw/Qwen2-VL-Detection", connectionOptions);
+    console.log('✅ AI Detection space connected');
+  } catch (e) {
+    console.warn('⚠️ Detection space failed, trying backup Qwen space...', e.message);
+    try {
+      aiClient = await Client.connect("Qwen/Qwen2-VL-7B-Instruct", connectionOptions);
+      console.log('✅ Backup AI space connected');
+    } catch (e2) {
+      console.error('❌ All AI spaces failed to connect:', e2.message);
+      throw e2;
+    }
   }
-  return GradioClient;
+  return aiClient;
 }
 
 app.post('/api/ai/detect', async (req, res) => {
   const { prompt } = req.body;
   try {
     const buffer = await adb('exec-out screencap -p');
-    const Client = await getGradio();
-    const client = await Client.connect("maxiw/Qwen2-VL-Detection", { hf_token: "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" });
+    const client = await getAIClient();
 
     // The user's requested params
     const result = await client.predict("/run_example", {
@@ -158,10 +182,11 @@ app.post('/api/ai/detect', async (req, res) => {
       success: true,
       output: result.data[0],
       boxes: result.data[1],
-      annotatedImage: result.data[2] // This is likely a URL or base64 from Gradio
+      annotatedImage: result.data[2]
     });
   } catch (err) {
-    console.error('AI Error:', err);
+    console.error('AI Error:', err.message);
+    if (err.message.includes('quota')) aiClient = null; // Force reconnect
     res.status(500).json({ error: err.message });
   }
 });
@@ -178,10 +203,30 @@ wss.on('connection', async (ws) => {
     try {
       const msg = JSON.parse(raw);
       switch (msg.type) {
-        case 'tap': await adbText(`shell input tap ${msg.x} ${msg.y}`); break;
-        case 'swipe': await adbText(`shell input swipe ${msg.x1} ${msg.y1} ${msg.x2} ${msg.y2} ${msg.duration || 300}`); break;
-        case 'type': await adbText(`shell input text "${msg.text.replace(/ /g, '%s')}"`); break;
-        case 'keyevent': await adbText(`shell input keyevent ${msg.keycode}`); break;
+        case 'tap':
+          console.log(`☝️ TAP command received: ${msg.x}, ${msg.y} (Img size: ${msg.w || 'unknown'}x${msg.h || 'unknown'})`);
+          try {
+            await adbText(`shell input tap ${msg.x} ${msg.y}`);
+          } catch (e) {
+            console.error(`❌ ADB TAP ERROR: ${e.message}`);
+          }
+          break;
+        case 'swipe':
+          console.log(`👉 SWIPE from ${msg.x1}, ${msg.y1} to ${msg.x2}, ${msg.y2}`);
+          try {
+            await adbText(`shell input swipe ${msg.x1} ${msg.y1} ${msg.x2} ${msg.y2} ${msg.duration || 300}`);
+          } catch (e) {
+            console.error(`❌ ADB SWIPE ERROR: ${e.message}`);
+          }
+          break;
+        case 'type':
+          console.log(`⌨️ TYPE: ${msg.text}`);
+          await adbText(`shell input text "${msg.text.replace(/ /g, '%s')}"`);
+          break;
+        case 'keyevent':
+          console.log(`🔘 KEY: ${msg.keycode}`);
+          await adbText(`shell input keyevent ${msg.keycode}`);
+          break;
         case 'ping': ws.send(JSON.stringify({ type: 'pong' })); break;
         case 'set_fps':
           const fps = parseInt(msg.value);
@@ -191,7 +236,10 @@ wss.on('connection', async (ws) => {
           }
           break;
       }
-    } catch (err) { ws.send(JSON.stringify({ type: 'error', message: err.message })); }
+    } catch (err) {
+      console.error('⚠️ WS Message Error:', err);
+      ws.send(JSON.stringify({ type: 'error', message: err.message }));
+    }
   });
 
   ws.on('close', () => {

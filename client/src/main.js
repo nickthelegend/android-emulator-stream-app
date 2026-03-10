@@ -333,8 +333,7 @@ async function sendChatMessage() {
 
         if (isActionRequest && !state.swarmActive) {
           addChatMessage('ai', "I've identified the target. Starting autonomous swarm to complete your goal...");
-          state.swarmGoal = text;
-          toggleSwarm(); // Start the loop
+          toggleSwarm(text); // Pass the goal directly
         }
       }
     } else {
@@ -360,16 +359,16 @@ function addChatMessage(type, text, isRaw = false) {
 }
 
 // ── Swarm Mode ────────────────────────────────────────────────────────────
-async function toggleSwarm() {
+async function toggleSwarm(providedGoal) {
   if (!state.swarmActive) {
-    const goal = document.getElementById('chatInput').value.trim();
+    const goal = providedGoal || document.getElementById('chatInput').value.trim();
     if (!goal) {
       addChatMessage('ai', "Goal required: Type what you want me to do in the input box, then click GOAL SWARM.");
       return;
     }
     state.swarmGoal = goal;
     addChatMessage('user', `Executing Goal: ${goal}`);
-    document.getElementById('chatInput').value = '';
+    if (!providedGoal) document.getElementById('chatInput').value = '';
   }
 
   state.swarmActive = !state.swarmActive;
@@ -448,8 +447,9 @@ If the objective is complete (e.g., ticket booked, payment reached, cart confirm
         const cx = Math.floor((box[0] + width / 2) / 1000 * state.imgW);
         const cy = Math.floor((box[1] + height / 2) / 1000 * state.imgH);
 
-        log('info', `Agent Tap: (${cx}, ${cy})`);
-        send({ type: 'tap', x: cx, y: cy });
+        log('info', `Agent Tap: (${cx}, ${cy}) on ${state.imgW}x${state.imgH}`);
+        addChatMessage('log', `Executing Tap at (${cx}, ${cy})`);
+        send({ type: 'tap', x: cx, y: cy, w: state.imgW, h: state.imgH });
 
         // Final Phase: 10s Countdown
         startSwarmCountdown(10);
