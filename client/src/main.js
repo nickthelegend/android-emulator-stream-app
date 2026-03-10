@@ -394,7 +394,12 @@ async function runSwarmCycle() {
   const loadingMsg = addChatMessage('thinking', '<div class="spinner"></div> Agent is executing...', true);
 
   try {
-    const prompt = `User Objective: "${state.swarmGoal}". Based on the current screen, identify the single best next action to reach this goal. If an interaction is needed, return the bounding box [xmin, ymin, xmax, ymax] for the element. If the objective is complete, include "TASK COMPLETED" in your response.`;
+    const prompt = `User Objective: "${state.swarmGoal}". 
+Current Task context: You are in the middle of an autonomous swarm. 
+Identify the single best next action to reach this goal. 
+If selecting movie shows or seats, look for list items, grid structures, or seat pins.
+Return the bounding box [xmin, ymin, xmax, ymax] for the target.
+If the objective is complete (e.g., ticket booked, payment reached, cart confirmed), include "TASK COMPLETED" in your response.`;
 
     const res = await fetch('/api/ai/detect', {
       method: 'POST',
@@ -446,8 +451,8 @@ async function runSwarmCycle() {
         log('info', `Agent Tap: (${cx}, ${cy})`);
         send({ type: 'tap', x: cx, y: cy });
 
-        addChatMessage('log', `Waiting 10s for screen update...`);
-        state.swarmTimeout = setTimeout(runSwarmCycle, 10000);
+        // Final Phase: 10s Countdown
+        startSwarmCountdown(10);
       } else {
         addChatMessage('ai', "Looking for next path... retrying in 5s.");
         state.swarmTimeout = setTimeout(runSwarmCycle, 5000);
@@ -460,9 +465,81 @@ async function runSwarmCycle() {
   }
 }
 
+// ── Voice & Countdown Helpers ─────────────────────────────────────────────
+function startSwarmCountdown(seconds) {
+  const overlay = document.getElementById('countdownOverlay');
+  overlay.style.display = 'block';
+
+  let timeLeft = seconds;
+  const update = () => {
+    if (!state.swarmActive) {
+      overlay.style.display = 'none';
+      return;
+    }
+    overlay.textContent = `Next action: ${timeLeft}s`;
+    if (timeLeft <= 0) {
+      overlay.style.display = 'none';
+      runSwarmCycle();
+    } else {
+      timeLeft--;
+      state.swarmTimeout = setTimeout(update, 1000);
+    }
+  };
+  update();
+}
+
+function initVoice() {
+  const micBtn = document.getElementById('micBtn');
+  const chatInput = document.getElementById('chatInput');
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    micBtn.style.display = 'none';
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  micBtn.onclick = () => {
+    if (state.voiceActive) {
+      recognition.stop();
+      return;
+    }
+    state.voiceActive = true;
+    micBtn.style.background = 'rgba(245, 158, 11, 0.2)';
+    micBtn.style.boxShadow = '0 0 15px var(--accent3)';
+    recognition.start();
+    addChatMessage('log', 'Listening for goal...');
+  };
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    chatInput.value = transcript;
+    addChatMessage('user', `Voice Command: ${transcript}`);
+
+    // Auto-trigger swarm
+    state.swarmGoal = transcript;
+    state.swarmActive = false; // Reset if active
+    toggleSwarm();
+  };
+
+  recognition.onend = () => {
+    state.voiceActive = false;
+    micBtn.style.background = 'transparent';
+    micBtn.style.boxShadow = 'none';
+  };
+
+  recognition.onerror = () => {
+    addChatMessage('log', 'Voice recognition error.');
+  };
+}
+
 // ── Event Listeners ──
 window.addEventListener('load', () => {
   connect();
+  initVoice();
 
   document.getElementById('screenshotBtn').onclick = takeScreenshot;
   document.getElementById('freezeBtn').onclick = toggleFreeze;

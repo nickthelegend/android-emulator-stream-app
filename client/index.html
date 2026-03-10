@@ -60,6 +60,8 @@
             click. Ask me anything!</div>
         </div>
         <div class="ai-chat-input-area">
+          <button id="micBtn"
+            style="background: transparent; color: var(--accent3); border: 1px solid var(--accent3); margin-right: 0;">🎤</button>
           <input type="text" id="chatInput" placeholder="Ask AI agent...">
           <button id="sendChatBtn">SEND</button>
         </div>
@@ -74,6 +76,9 @@
           <div class="canvas-wrapper" id="canvasWrapper">
             <canvas id="screen" width="360" height="780"></canvas>
             <div id="swipeOverlay"></div>
+            <div id="countdownOverlay"
+              style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.8); color: var(--accent); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--accent); font-family: 'Space Mono', monospace; font-size: 12px; display: none; z-index: 1000; box-shadow: 0 0 10px rgba(0,255,136,0.3);">
+              Next action: 10s</div>
             <div class="loading-overlay" id="loadingOverlay">
               <div class="loading-spinner"></div>
               <div class="loading-text">Connecting to emulator...</div>
