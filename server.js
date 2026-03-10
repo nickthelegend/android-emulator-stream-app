@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const { exec } = require('child_process');
 const WebSocket = require('ws');
@@ -22,7 +23,7 @@ let lastFrame = null;
 let emulatorStatus = 'unknown';
 let isCapturing = false;
 
-const DEVICE_ID = 'R5CR1004A5X';
+const DEVICE_ID = process.env.DEVICE_ID || 'R5CR1004A5X';
 
 function adb(cmd) {
   return new Promise((resolve, reject) => {
@@ -130,20 +131,19 @@ app.post('/api/key/:key', async (req, res) => {
   res.json({ success: true });
 });
 
-// Set token globally to ensure Gradio client picks it up
-process.env.HF_TOKEN = "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";
+// Token is loaded from .env via dotenv
+const hfToken = process.env.HF_TOKEN;
 
 let aiClient = null;
 async function getAIClient() {
   if (aiClient) return aiClient;
 
   const { Client } = await import('@gradio/client');
-  const token = process.env.HF_TOKEN;
 
   const connectionOptions = {
-    hf_token: token,
+    hf_token: hfToken,
     headers: {
-      Authorization: `Bearer ${token}`
+      Authorization: `Bearer ${hfToken}`
     }
   };
 
