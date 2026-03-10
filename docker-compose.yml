@@ -1,0 +1,10 @@
+services:
+  androidstream:
+    build: .
+    environment:
+      - PORT=3000
+      - FRAME_RATE=10
+      - QUALITY=60
+      - SCALE=50%
+    network_mode: host
+    restart: unless-stopped

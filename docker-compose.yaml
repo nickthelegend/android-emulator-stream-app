@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  androidstream:
+    build: .
+    ports:
+      - "0.0.0.0:3000:3000"
+    environment:
+      - PORT=3000
+      - FRAME_RATE=2
+    network_mode: host   # lets container reach host ADB/emulator on 127.0.0.1:5037
+    restart: unless-stopped

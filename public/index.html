@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AndroidStream — Remote Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080b0f;
+      --surface: #0d1117;
+      --surface2: #161b22;
+      --border: #21262d;
+      --accent: #00ff88;
+      --accent2: #0ea5e9;
+      --accent3: #f59e0b;
+      --danger: #ef4444;
+      --text: #e6edf3;
+      --muted: #7d8590;
+      --glow: 0 0 20px rgba(0,255,136,0.15);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      overflow: hidden;
+    }
+
+    /* Grain overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.4;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 260px 1fr 240px;
+      grid-template-rows: 56px 1fr;
+      height: 100vh;
+      gap: 0;
+    }
+
+    /* ── Header ── */
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      gap: 20px;
+      position: relative;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.05em;
+    }
+
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #000;
+      font-size: 14px;
+    }
+
+    .logo-text { color: var(--text); }
+    .logo-text span { color: var(--accent); }
+
+    .header-divider {
+      width: 1px;
+      height: 24px;
+      background: var(--border);
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .status-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: all 0.3s;
+    }
+
+    .status-dot.online { background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 2s infinite; }
+    .status-dot.offline { background: var(--danger); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,255,136,0.05); }
+    .btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,255,136,0.08); }
+    .btn.danger:hover { border-color: var(--danger); color: var(--danger); background: rgba(239,68,68,0.05); }
+
+    /* ── Left Panel ── */
+    .panel-left {
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-section {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    /* Device controls */
+    .key-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .key-btn {
+      padding: 10px 6px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+
+    .key-btn:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(14,165,233,0.08); transform: translateY(-1px); }
+    .key-btn:active { transform: translateY(0); }
+
+    .key-btn .icon { font-size: 16px; display: block; margin-bottom: 3px; }
+
+    /* Input area */
+    .text-input-area {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .text-input-area textarea {
+      width: 100%;
+      padding: 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      resize: none;
+      height: 70px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .text-input-area textarea:focus { border-color: var(--accent); }
+    .text-input-area textarea::placeholder { color: var(--muted); }
+
+    .send-btn {
+      width: 100%;
+      padding: 8px;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .send-btn:hover { background: #00e07a; box-shadow: var(--glow); }
+
+    /* Agent log */
+    .agent-log {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .log-entry {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      border-left: 2px solid transparent;
+      animation: slideIn 0.2s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-6px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .log-entry.tap { border-color: var(--accent); background: rgba(0,255,136,0.05); color: var(--accent); }
+    .log-entry.swipe { border-color: var(--accent2); background: rgba(14,165,233,0.05); color: var(--accent2); }
+    .log-entry.key { border-color: var(--accent3); background: rgba(245,158,11,0.05); color: var(--accent3); }
+    .log-entry.info { border-color: var(--muted); color: var(--muted); }
+    .log-entry.error { border-color: var(--danger); background: rgba(239,68,68,0.05); color: var(--danger); }
+
+    .log-time { opacity: 0.5; margin-right: 6px; }
+
+    /* ── Center: Screen ── */
+    .screen-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #050709;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .screen-area::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(0,255,136,0.03) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 50%, rgba(14,165,233,0.03) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .phone-frame {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .phone-shell {
+      background: #0d1117;
+      border: 2px solid #21262d;
+      border-radius: 36px;
+      padding: 16px 10px;
+      position: relative;
+      box-shadow:
+        0 0 0 1px #161b22,
+        0 40px 80px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+
+    .phone-notch {
+      width: 80px;
+      height: 6px;
+      background: #21262d;
+      border-radius: 3px;
+      margin: 0 auto 10px;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      overflow: hidden;
+      border-radius: 4px;
+    }
+
+    #screen {
+      display: block;
+      max-height: calc(100vh - 160px);
+      width: auto;
+      cursor: crosshair;
+      image-rendering: auto;
+    }
+
+    .click-ripple {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      animation: ripple 0.5s ease-out forwards;
+    }
+
+    @keyframes ripple {
+      0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+    }
+
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(5,7,9,0.9);
+      border-radius: 4px;
+      gap: 14px;
+    }
+
+    .loading-spinner {
+      width: 36px;
+      height: 36px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .phone-home-bar {
+      width: 80px;
+      height: 4px;
+      background: #21262d;
+      border-radius: 2px;
+      margin: 10px auto 0;
+    }
+
+    /* Swipe mode overlay */
+    #swipeOverlay {
+      position: absolute;
+      inset: 0;
+      cursor: crosshair;
+      display: none;
+    }
+
+    #swipeOverlay.active { display: block; }
+
+    .swipe-line {
+      position: absolute;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent2), transparent);
+      transform-origin: left center;
+      pointer-events: none;
+      animation: fadeOut 0.5s ease forwards;
+    }
+
+    @keyframes fadeOut { to { opacity: 0; } }
+
+    /* ── Right Panel ── */
+    .panel-right {
+      border-left: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .stat-value {
+      font-family: 'Space Mono', monospace;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .stat-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 2px;
+    }
+
+    /* Swipe presets */
+    .swipe-presets {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .preset-btn {
+      padding: 10px 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .preset-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+    .preset-btn .icon { font-size: 18px; display: block; margin-bottom: 3px; }
+
+    /* FPS slider */
+    .slider-wrapper { display: flex; flex-direction: column; gap: 8px; }
+
+    .fps-display {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+    }
+
+    .fps-value { color: var(--accent); font-weight: 700; }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(0,255,136,0.4);
+    }
+
+    /* Mode toggle */
+    .mode-toggle {
+      display: flex;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 3px;
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 7px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .mode-btn.active { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <div class="layout">
+
+    <!-- Header -->
+    <header>
+      <div class="logo">
+        <div class="logo-icon">📱</div>
+        <div class="logo-text">Android<span>Stream</span></div>
+      </div>
+      <div class="header-divider"></div>
+      <div class="status-bar">
+        <div class="status-chip">
+          <div class="status-dot" id="emuDot"></div>
+          <span id="emuStatus">Connecting...</span>
+        </div>
+        <div class="status-chip">
+          <div class="status-dot online"></div>
+          <span id="clientCount">0 clients</span>
+        </div>
+        <div class="status-chip" id="pingChip" style="display:none">
+          <span>⚡ <span id="pingMs">--</span>ms</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn" onclick="takeScreenshot()">📸 Screenshot</button>
+        <button class="btn" id="freezeBtn" onclick="toggleFreeze()">⏸ Freeze</button>
+        <button class="btn danger" onclick="sendKey(3)">⌂ Home</button>
+      </div>
+    </header>
+
+    <!-- Left Panel -->
+    <div class="panel-left">
+      <div class="panel-section">
+        <div class="panel-label">Device Controls</div>
+        <div class="key-grid">
+          <button class="key-btn" onclick="sendKey(4)"><span class="icon">◀</span>Back</button>
+          <button class="key-btn" onclick="sendKey(3)"><span class="icon">⌂</span>Home</button>
+          <button class="key-btn" onclick="sendKey(187)"><span class="icon">▣</span>Recents</button>
+          <button class="key-btn" onclick="sendKey(24)"><span class="icon">🔊</span>Vol+</button>
+          <button class="key-btn" onclick="sendKey(25)"><span class="icon">🔉</span>Vol-</button>
+          <button class="key-btn" onclick="sendKey(26)"><span class="icon">⏻</span>Power</button>
+          <button class="key-btn" onclick="sendKey(66)"><span class="icon">↵</span>Enter</button>
+          <button class="key-btn" onclick="sendKey(67)"><span class="icon">⌫</span>Del</button>
+          <button class="key-btn" onclick="sendKey(82)"><span class="icon">☰</span>Menu</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-label">Type Text</div>
+        <div class="text-input-area">
+          <textarea id="typeText" placeholder="Type something to send..."></textarea>
+          <button class="send-btn" onclick="sendText()">SEND TEXT ↵</button>
+        </div>
+      </div>
+
+      <div class="panel-label" style="padding: 16px 16px 8px; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted)">Action Log</div>
+      <div class="agent-log" id="actionLog">
+        <div class="log-entry info"><span class="log-time">--:--:--</span>Waiting for connection...</div>
+      </div>
+    </div>
+
+    <!-- Center Screen -->
+    <div class="screen-area">
+      <div class="phone-frame">
+        <div class="phone-shell">
+          <div class="phone-notch"></div>
+          <div class="canvas-wrapper" id="canvasWrapper">
+            <canvas id="screen" width="360" height="780"></canvas>
+            <div id="swipeOverlay"></div>
+            <div class="loading-overlay" id="loadingOverlay">
+              <div class="loading-spinner"></div>
+              <div class="loading-text">Connecting to emulator...</div>
+            </div>
+          </div>
+          <div class="phone-home-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="panel-right">
+      <div class="panel-section">
+        <div class="panel-label">Stats</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="statFps">0</div>
+            <div class="stat-label">FPS</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statFrames">0</div>
+            <div class="stat-label">Frames</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statTaps">0</div>
+            <div class="stat-label">Taps</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statRes">--</div>
+            <div class="stat-label">Resolution</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-label">Interaction Mode</div>
+        <div class="mode-toggle">
+          <button class="mode-btn active" id="modeTap" onclick="setMode('tap')">👆 Tap</button>
+          <button class="mode-btn" id="modeSwipe" onclick="setMode('swipe')">👉 Swipe</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-label">Swipe Presets</div>
+        <div class="swipe-presets">
+          <button class="preset-btn" onclick="doSwipe('up')"><span class="icon">⬆</span>Scroll Up</button>
+          <button class="preset-btn" onclick="doSwipe('down')"><span class="icon">⬇</span>Scroll Down</button>
+          <button class="preset-btn" onclick="doSwipe('left')"><span class="icon">⬅</span>Swipe Left</button>
+          <button class="preset-btn" onclick="doSwipe('right')"><span class="icon">➡</span>Swipe Right</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-label">Frame Rate</div>
+        <div class="slider-wrapper">
+          <div class="fps-display">
+            <span style="color:var(--muted)">Refresh rate</span>
+            <span class="fps-value"><span id="fpsVal">2</span> fps</span>
+          </div>
+          <input type="range" min="1" max="10" value="2" id="fpsSlider" oninput="updateFps(this.value)">
+        </div>
+      </div>
+
+      <div class="panel-section" style="flex:1">
+        <div class="panel-label">Agent API</div>
+        <div style="font-family:'Space Mono',monospace; font-size:10px; color:var(--muted); line-height:1.8">
+          <div style="color:var(--accent2); margin-bottom:6px">POST /api/agent</div>
+          <div>{ "action": "tap",</div>
+          <div>&nbsp;&nbsp;"x": 500, "y": 800 }</div>
+          <br>
+          <div>{ "action": "swipe",</div>
+          <div>&nbsp;&nbsp;"x": 180, "y": 800,</div>
+          <div>&nbsp;&nbsp;"x2": 180, "y2": 200 }</div>
+          <br>
+          <div>{ "action": "type",</div>
+          <div>&nbsp;&nbsp;"text": "hello" }</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ── State ──────────────────────────────────────────────────────────────────
+    const state = {
+      ws: null,
+      connected: false,
+      frozen: false,
+      mode: 'tap',
+      frames: 0,
+      taps: 0,
+      lastFrameTime: 0,
+      fpsHistory: [],
+      swipeStart: null,
+      imgW: 360,
+      imgH: 780
+    };
+
+    const canvas = document.getElementById('screen');
+    const ctx = canvas.getContext('2d');
+    const wrapper = document.getElementById('canvasWrapper');
+    const overlay = document.getElementById('swipeOverlay');
+
+    // ── WebSocket ──────────────────────────────────────────────────────────────
+    function connect() {
+      const wsUrl = `ws://${location.host}`;
+      state.ws = new WebSocket(wsUrl);
+
+      state.ws.onopen = () => {
+        state.connected = true;
+        log('info', 'Connected to server');
+        startPing();
+      };
+
+      state.ws.onclose = () => {
+        state.connected = false;
+        updateStatus('offline', 'Disconnected');
+        log('error', 'Connection lost — retrying...');
+        setTimeout(connect, 2000);
+      };
+
+      state.ws.onerror = () => log('error', 'WebSocket error');
+
+      state.ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+
+        if (msg.type === 'frame' && !state.frozen) {
+          renderFrame(msg.data);
+        }
+
+        if (msg.type === 'status') {
+          updateStatus(msg.emulator === 'online' ? 'online' : 'offline',
+            msg.emulator === 'online' ? 'Emulator Online' : 'Emulator Offline');
+          document.getElementById('clientCount').textContent = `${msg.clients} client${msg.clients !== 1 ? 's' : ''}`;
+        }
+
+        if (msg.type === 'pong') {
+          const ping = Date.now() - state.pingTime;
+          document.getElementById('pingMs').textContent = ping;
+          document.getElementById('pingChip').style.display = '';
+        }
+      };
+    }
+
+    function send(data) {
+      if (state.ws?.readyState === WebSocket.OPEN) {
+        state.ws.send(JSON.stringify(data));
+      }
+    }
+
+    // ── Render Frame ───────────────────────────────────────────────────────────
+    function renderFrame(base64) {
+      const img = new Image();
+      img.onload = () => {
+        if (img.width !== state.imgW || img.height !== state.imgH) {
+          state.imgW = img.width;
+          state.imgH = img.height;
+          canvas.width = img.width;
+          canvas.height = img.height;
+          document.getElementById('statRes').textContent =
+            img.width > 999 ? `${(img.width/1000).toFixed(1)}K` : img.width;
+        }
+        ctx.drawImage(img, 0, 0);
+
+        // FPS calculation
+        const now = Date.now();
+        if (state.lastFrameTime) {
+          const fps = 1000 / (now - state.lastFrameTime);
+          state.fpsHistory.push(fps);
+          if (state.fpsHistory.length > 10) state.fpsHistory.shift();
+          const avgFps = state.fpsHistory.reduce((a, b) => a + b) / state.fpsHistory.length;
+          document.getElementById('statFps').textContent = avgFps.toFixed(1);
+        }
+        state.lastFrameTime = now;
+        state.frames++;
+        document.getElementById('statFrames').textContent =
+          state.frames > 999 ? `${(state.frames/1000).toFixed(1)}K` : state.frames;
+
+        // Hide loading overlay
+        document.getElementById('loadingOverlay').style.display = 'none';
+      };
+      img.src = 'data:image/png;base64,' + base64;
+    }
+
+    // ── Canvas interaction ─────────────────────────────────────────────────────
+    function getCanvasCoords(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return {
+        x: Math.floor((e.clientX - rect.left) * scaleX),
+        y: Math.floor((e.clientY - rect.top) * scaleY)
+      };
+    }
+
+    canvas.addEventListener('click', (e) => {
+      if (state.mode !== 'tap') return;
+      const { x, y } = getCanvasCoords(e);
+      send({ type: 'tap', x, y });
+      state.taps++;
+      document.getElementById('statTaps').textContent = state.taps;
+      log('tap', `Tap (${x}, ${y})`);
+      spawnRipple(e.offsetX, e.offsetY);
+    });
+
+    // Swipe on overlay
+    overlay.addEventListener('mousedown', (e) => {
+      const { x, y } = getCanvasCoords(e);
+      state.swipeStart = { x, y, cx: e.offsetX, cy: e.offsetY };
+    });
+
+    overlay.addEventListener('mouseup', (e) => {
+      if (!state.swipeStart) return;
+      const { x, y } = getCanvasCoords(e);
+      send({ type: 'swipe', x1: state.swipeStart.x, y1: state.swipeStart.y, x2: x, y2: y, duration: 300 });
+      log('swipe', `Swipe (${state.swipeStart.x},${state.swipeStart.y}) → (${x},${y})`);
+      state.swipeStart = null;
+    });
+
+    function spawnRipple(x, y) {
+      const r = document.createElement('div');
+      r.className = 'click-ripple';
+      r.style.left = x + 'px';
+      r.style.top = y + 'px';
+      wrapper.appendChild(r);
+      setTimeout(() => r.remove(), 500);
+    }
+
+    // ── Controls ───────────────────────────────────────────────────────────────
+    function sendKey(keycode) {
+      send({ type: 'keyevent', keycode });
+      const names = { 3: 'Home', 4: 'Back', 26: 'Power', 24: 'Vol+', 25: 'Vol-', 66: 'Enter', 67: 'Delete', 82: 'Menu', 187: 'Recents' };
+      log('key', `Key: ${names[keycode] || keycode}`);
+    }
+
+    function sendText() {
+      const text = document.getElementById('typeText').value.trim();
+      if (!text) return;
+      send({ type: 'type', text });
+      log('tap', `Type: "${text.substring(0, 20)}${text.length > 20 ? '...' : ''}"`);
+      document.getElementById('typeText').value = '';
+    }
+
+    document.getElementById('typeText').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(); }
+    });
+
+    function doSwipe(dir) {
+      const w = state.imgW, h = state.imgH;
+      const cx = w / 2, cy = h / 2;
+      const map = {
+        up:    { x1: cx, y1: cy + 200, x2: cx, y2: cy - 200 },
+        down:  { x1: cx, y1: cy - 200, x2: cx, y2: cy + 200 },
+        left:  { x1: cx + 200, y1: cy, x2: cx - 200, y2: cy },
+        right: { x1: cx - 200, y1: cy, x2: cx + 200, y2: cy }
+      };
+      const s = map[dir];
+      send({ type: 'swipe', ...s, duration: 400 });
+      log('swipe', `Swipe ${dir}`);
+    }
+
+    function setMode(mode) {
+      state.mode = mode;
+      document.getElementById('modeTap').classList.toggle('active', mode === 'tap');
+      document.getElementById('modeSwipe').classList.toggle('active', mode === 'swipe');
+      overlay.classList.toggle('active', mode === 'swipe');
+      canvas.style.cursor = mode === 'swipe' ? 'crosshair' : 'crosshair';
+      log('info', `Mode: ${mode}`);
+    }
+
+    function toggleFreeze() {
+      state.frozen = !state.frozen;
+      document.getElementById('freezeBtn').classList.toggle('active', state.frozen);
+      document.getElementById('freezeBtn').textContent = state.frozen ? '▶ Resume' : '⏸ Freeze';
+      log('info', state.frozen ? 'Stream frozen' : 'Stream resumed');
+    }
+
+    function takeScreenshot() {
+      const link = document.createElement('a');
+      link.download = `screenshot-${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      log('info', 'Screenshot saved');
+    }
+
+    function updateFps(val) {
+      document.getElementById('fpsVal').textContent = val;
+    }
+
+    // ── Status ─────────────────────────────────────────────────────────────────
+    function updateStatus(status, text) {
+      const dot = document.getElementById('emuDot');
+      dot.className = 'status-dot ' + status;
+      document.getElementById('emuStatus').textContent = text;
+    }
+
+    // ── Ping ───────────────────────────────────────────────────────────────────
+    function startPing() {
+      setInterval(() => {
+        state.pingTime = Date.now();
+        send({ type: 'ping' });
+      }, 3000);
+    }
+
+    // ── Log ────────────────────────────────────────────────────────────────────
+    function log(type, msg) {
+      const logEl = document.getElementById('actionLog');
+      const now = new Date();
+      const time = now.toTimeString().slice(0, 8);
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.innerHTML = `<span class="log-time">${time}</span>${msg}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+      // Keep max 100 entries
+      while (logEl.children.length > 100) logEl.removeChild(logEl.firstChild);
+    }
+
+    // ── Init ───────────────────────────────────────────────────────────────────
+    connect();
+  </script>
+</body>
+</html>
